@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mrverdant13/go_api/db"
+	"github.com/mrverdant13/go_api/products"
 )
 
 func main() {
@@ -23,6 +24,10 @@ func main() {
 		"/products",
 		getProducts,
 	)
+	r.Post(
+		"/products",
+		createProduct,
+	)
 
 	http.ListenAndServe(":3000", r)
 
@@ -35,12 +40,42 @@ func getProducts(w http.ResponseWriter, r *http.Request) {
 		responseWithErrorMessage(
 			w,
 			http.StatusInternalServerError,
-			"Unexpected error",
+			err.Error(),
 		)
 		return
 	}
 
-	responseWithJSON(w, http.StatusOK, prods)
+	responseWithJSON(
+		w,
+		http.StatusOK,
+		prods,
+	)
+}
+
+func createProduct(w http.ResponseWriter, r *http.Request) {
+	var prod products.Product
+
+	json.NewDecoder(r.Body).Decode(&prod)
+
+	prodId, err := db.CreateProduct(prod)
+	if err != nil {
+		log.Println(err)
+		responseWithErrorMessage(
+			w,
+			http.StatusInternalServerError,
+			err.Error(),
+		)
+		return
+	}
+
+	responseWithJSON(
+		w,
+		http.StatusCreated,
+		map[string]interface{}{
+			"msg": "Product created",
+			"id":  prodId,
+		},
+	)
 }
 
 func responseWithErrorMessage(w http.ResponseWriter, code int, msg string) {
