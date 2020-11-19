@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -27,6 +28,14 @@ func main() {
 	r.Post(
 		"/products",
 		createProduct,
+	)
+	r.Put(
+		"/products/{id}",
+		updateProduct,
+	)
+	r.Delete(
+		"/products/{id}",
+		deleteProduct,
 	)
 
 	http.ListenAndServe(":3000", r)
@@ -54,7 +63,6 @@ func getProducts(w http.ResponseWriter, r *http.Request) {
 
 func createProduct(w http.ResponseWriter, r *http.Request) {
 	var prod products.Product
-
 	json.NewDecoder(r.Body).Decode(&prod)
 
 	prodId, err := db.CreateProduct(prod)
@@ -74,6 +82,76 @@ func createProduct(w http.ResponseWriter, r *http.Request) {
 		map[string]interface{}{
 			"msg": "Product created",
 			"id":  prodId,
+		},
+	)
+}
+
+func updateProduct(w http.ResponseWriter, r *http.Request) {
+	var prod products.Product
+	json.NewDecoder(r.Body).Decode(&prod)
+
+	var err error
+	prod.ID, err = strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		log.Println(err)
+		responseWithErrorMessage(
+			w,
+			http.StatusInternalServerError,
+			err.Error(),
+		)
+		return
+	}
+
+	err = db.UpdateProduct(prod)
+	if err != nil {
+		log.Println(err)
+		responseWithErrorMessage(
+			w,
+			http.StatusInternalServerError,
+			err.Error(),
+		)
+		return
+	}
+
+	responseWithJSON(
+		w,
+		http.StatusOK,
+		map[string]interface{}{
+			"msg": "Product updated",
+			"id":  prod.ID,
+		},
+	)
+}
+
+func deleteProduct(w http.ResponseWriter, r *http.Request) {
+	prodID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		log.Println(err)
+		responseWithErrorMessage(
+			w,
+			http.StatusInternalServerError,
+			err.Error(),
+		)
+		return
+	}
+
+	err = db.DeleteProduct(prodID)
+	if err != nil {
+		log.Println(err)
+		responseWithErrorMessage(
+			w,
+			http.StatusInternalServerError,
+			err.Error(),
+		)
+		return
+	}
+
+	responseWithJSON(
+		w,
+		http.StatusOK,
+		map[string]interface{}{
+			"msg": "Product deleted",
+			"id":  prodID,
 		},
 	)
 }

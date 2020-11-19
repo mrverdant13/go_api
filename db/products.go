@@ -12,6 +12,39 @@ const (
 	prodsSelectQueryBase = "select id, product_name, COALESCE(description,'') from products"
 )
 
+func CreateProduct(prod products.Product) (*int64, error) {
+	stmt, err := dbM.Prepare(
+		"insert into products (product_name, description) values (?, ?)",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := stmt.Exec(
+		prod.Name,
+		prod.Description,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	lastId, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	rowCnt, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+
+	if rowCnt != 1 {
+		return nil, fmt.Errorf("Unexpected error")
+	}
+
+	return &lastId, nil
+}
+
 func GetProducts() ([]products.Product, error) {
 	// Try to excute the query.
 	rows, err := dbM.Query(
@@ -54,13 +87,13 @@ func GetProducts() ([]products.Product, error) {
 	return prods, nil
 }
 
-func GetProductById(id int) (*products.Product, error) {
+func GetProductById(ID int) (*products.Product, error) {
 	var prod products.Product
 
 	// Try to excute the query.
 	err := dbM.QueryRow(
 		prodsSelectQueryBase+" where id = ?",
-		id,
+		ID,
 	).Scan(
 		&prod.ID,
 		&prod.Name,
@@ -69,7 +102,7 @@ func GetProductById(id int) (*products.Product, error) {
 
 	// Check query execution error.
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("Product with id <%v> not found.", id)
+		return nil, fmt.Errorf("Product with id <%v> not found.", ID)
 	} else if err != nil {
 		log.Fatal(err)
 	}
@@ -77,35 +110,58 @@ func GetProductById(id int) (*products.Product, error) {
 	return &prod, nil
 }
 
-func CreateProduct(prod products.Product) (*int64, error) {
+func UpdateProduct(prod products.Product) error {
 	stmt, err := dbM.Prepare(
-		"insert into products (product_name, description) values (?, ?)",
+		"update products set product_name = ?, description = ? where id = ?",
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	res, err := stmt.Exec(
 		prod.Name,
 		prod.Description,
+		prod.ID,
 	)
 	if err != nil {
-		return nil, err
-	}
-
-	lastId, err := res.LastInsertId()
-	if err != nil {
-		return nil, err
+		return err
 	}
 
 	rowCnt, err := res.RowsAffected()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if rowCnt != 1 {
-		return nil, fmt.Errorf("Unexpected error")
+		return fmt.Errorf("Unexpected error. Should result in exactly one row affected.")
 	}
 
-	return &lastId, nil
+	return nil
+}
+
+func DeleteProduct(ID int64) error {
+	stmt, err := dbM.Prepare(
+		"delete from products where id = ?",
+	)
+	if err != nil {
+		return err
+	}
+
+	res, err := stmt.Exec(
+		ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowCnt, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowCnt != 1 {
+		return fmt.Errorf("Unexpected error. Should result in exactly one row affected.")
+	}
+
+	return nil
 }
