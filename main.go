@@ -149,10 +149,7 @@ func deleteProduct(w http.ResponseWriter, r *http.Request) {
 	responseWithJSON(
 		w,
 		http.StatusOK,
-		map[string]interface{}{
-			"msg": "Product deleted",
-			"id":  prodID,
-		},
+		map[string]interface{}{"msg": "Product deleted"},
 	)
 }
 
