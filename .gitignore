@@ -18,3 +18,4 @@
 
 # CUSTOM
 *.sqlite
+__debug_bin
